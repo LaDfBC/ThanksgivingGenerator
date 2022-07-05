@@ -11,17 +11,18 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import jaerapps.functions.generateNames.util.Assignment;
 import jaerapps.functions.generateNames.util.GoogleSecretManagerService;
-import jaerapps.functions.generateNames.util.Person;
 import jaerapps.functions.generateNames.util.GoogleSheetsService;
+import jaerapps.functions.generateNames.util.Person;
 
-import javax.mail.*;
+import javax.mail.Message;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -118,9 +119,12 @@ public class GenerateGiftNames implements HttpFunction {
 
         assignments.forEach((santa, target) -> {
             if (parentGroups.containsKey(santa.getParentOverride())) {
-                parentGroups.get(santa.getParentOverride()).add(new Assignment(santa, target));
+                List<Assignment> currentPeopleUnderParent= parentGroups.get(santa.getParentOverride());
+                currentPeopleUnderParent.add(new Assignment(santa, target));
+                parentGroups.put(santa.getParentOverride(), currentPeopleUnderParent);
+            } else {
+                parentGroups.put(santa.getParentOverride(), Lists.newArrayList(Collections.singletonList(new Assignment(santa, target))));
             }
-            parentGroups.put(santa.getParentOverride(), Lists.newArrayList(Collections.singletonList(new Assignment(santa, target))));
         });
         return parentGroups;
     }
@@ -149,9 +153,9 @@ public class GenerateGiftNames implements HttpFunction {
 
     private Person selectRandomPersonNotInGroup(Person currentSanta, Multimap<String, Person> notYetAssignedPeopleGrouped) {
         List<Person> membersNotInGroup = Lists.newArrayList();
-        for(String group : notYetAssignedPeopleGrouped.keys()) {
-            Collection<Person> peopleInGroup = notYetAssignedPeopleGrouped.get(group);
-            if (!peopleInGroup.contains(currentSanta)) {
+        for(String group : notYetAssignedPeopleGrouped.keySet()) {
+            List<Person> peopleInGroup = Lists.newArrayList(notYetAssignedPeopleGrouped.get(group));
+            if (notYetAssignedPeopleGrouped.size() != 0 && !currentSanta.getGroup().equals(peopleInGroup.get(0).getGroup())) {
                 membersNotInGroup.addAll(peopleInGroup);
             }
         }
@@ -161,9 +165,9 @@ public class GenerateGiftNames implements HttpFunction {
 
     private List<Person> getLargestEligibleGroup(Person currentSanta, Multimap<String, Person> notYetAssignedPeopleGrouped) {
         Collection<Person> largestGroup = Lists.newArrayList();
-        for(String group : notYetAssignedPeopleGrouped.keys()) {
-            Collection<Person> peopleInGroup = notYetAssignedPeopleGrouped.get(group);
-            if (!peopleInGroup.contains(currentSanta)) {
+        for(String group : notYetAssignedPeopleGrouped.keySet()) {
+            List<Person> peopleInGroup = Lists.newArrayList(notYetAssignedPeopleGrouped.get(group));
+                if (notYetAssignedPeopleGrouped.size() != 0 && !currentSanta.getGroup().equals(peopleInGroup.get(0).getGroup())) {
                 if (largestGroup.size() < peopleInGroup.size()) {
                     largestGroup = peopleInGroup;
                 }
