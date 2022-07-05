@@ -9,6 +9,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import jaerapps.functions.generateNames.util.Assignment;
+import jaerapps.functions.generateNames.util.GoogleSecretManagerService;
 import jaerapps.functions.generateNames.util.Person;
 import jaerapps.functions.generateNames.util.GoogleSheetsService;
 
@@ -18,7 +20,10 @@ import javax.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static jaerapps.functions.generateNames.util.GoogleSheetsService.logAssignments;
 
@@ -46,48 +51,77 @@ public class GenerateGiftNames implements HttpFunction {
     }
 
     private void sendEmails(Map<Person, Person> assignments) {
+        String userName = "christmasemailer.noreply@gmail.com";
+        String password = GoogleSecretManagerService.getEmailPassword();
         Properties properties = System.getProperties();
         // Setup mail server
-        properties.put("mail.smtp.host", "smtp.gmail.com");
-        properties.put("mail.smtp.port", "465");
-        properties.put("mail.smtp.ssl.enable", "true");
-        properties.put("mail.smtp.auth", "true");
+        properties.setProperty("mail.smtp.host", "smtp.gmail.com");
+        properties.setProperty("mail.smtp.user", userName);
+        properties.setProperty("mail.smtp.password", password);
+        properties.setProperty("mail.smtp.port", "465");
+        properties.setProperty("mail.smtp.ssl.enable", "true");
+        properties.setProperty("mail.smtp.auth", "true");
 
         // Get the Session object.// and pass username and password
         Session session = Session.getInstance(properties, new javax.mail.Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication("fromaddress@gmail.com", "*******");
+                return new PasswordAuthentication(userName, password);
             }
         });
 
-        Multimap<String, Person> parentGroups = combineChildrenUnderParent(assignments);
-        parentGroups.keys().forEach(currentEmail -> {
+        Map<String, List<Assignment>> parentGroups = combineChildrenUnderParent(assignments);
+        parentGroups.forEach((currentParentName, children) -> {
+            Person parent = findPersonByName(assignments, currentParentName);
             MimeMessage message = new MimeMessage(session);
             try {
-                message.setFrom(new InternetAddress("christmasemailer_noreply@gmail.com"));
+                message.setFrom(new InternetAddress("christmasemailer.noreply@gmail.com"));
                 message.setSubject("Larkin Secret Santa!");
+                message.addRecipient(Message.RecipientType.TO, new InternetAddress(parent.getEmail()));
 
-                parentGroups.get(currentEmail).forEach(person -> {
+                StringBuilder text = new StringBuilder("Hi - Here's your secret santa list (Santa on the left, recipient on the right!): \n");
+                children.forEach(currentChild -> {
                     try {
-                        message.addRecipient(Message.RecipientType.TO, new InternetAddress());
-                        message.setText("Hi - you're buying for ");
-
-                        Transport.send(message);
+                        text.append(currentChild.getSanta().getName())
+                                .append(" -> ")
+                                .append(currentChild.getAssignment().getName())
+                                .append("\n");
                         System.out.println("Sent message successfully....");
                     } catch (Exception e) {
-                        LOGGER.severe("Failed to send email to " + currentEmail);
+                        LOGGER.severe("Failed to send email to " + parent.getEmail());
                     }
                 });
+
+                message.setText(text.toString());
+                Transport.send(message);
             } catch (Exception e) {
-                LOGGER.severe("Failed to send email to " + currentEmail);
+                e.printStackTrace();
+                LOGGER.severe("Failed to send email to " + parent.getEmail());
             }
         });
-
     }
 
-    private Multimap<String, Person> combineChildrenUnderParent(Map<Person, Person> assignments) {
-        Multimap<String, Person> parentGroups = ArrayListMultimap.create();
-        assignments.forEach((santa, assignment) -> parentGroups.put(santa.getEmail(), assignment));
+    private Person findPersonByName(Map<Person, Person> assignments, String currentParentName) {
+            List<Person> personByName = assignments.keySet().stream().filter(person ->
+                person.getName().equals(currentParentName)).collect(Collectors.toList());
+
+        if (personByName.size() != 1) {
+            throw new IllegalStateException(
+                    "Encountered " + personByName.size() + " people with the name " + currentParentName + " instead of 1");
+        }
+
+        return personByName.get(0);
+    }
+
+
+    private Map<String, List<Assignment>> combineChildrenUnderParent(Map<Person, Person> assignments) {
+        Map<String, List<Assignment>> parentGroups = Maps.newHashMap();
+
+        assignments.forEach((santa, target) -> {
+            if (parentGroups.containsKey(santa.getParentOverride())) {
+                parentGroups.get(santa.getParentOverride()).add(new Assignment(santa, target));
+            }
+            parentGroups.put(santa.getParentOverride(), Lists.newArrayList(Collections.singletonList(new Assignment(santa, target))));
+        });
         return parentGroups;
     }
 
