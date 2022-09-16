@@ -36,6 +36,23 @@ public class GoogleSheetsService {
     private static final String CREDENTIALS_FILE_PATH = "/home/jaera/configs/oauth_client.json";
     private static final LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
 
+    public static List<String> getGenerations (String spreadsheetId) throws GeneralSecurityException, IOException {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        final String range = "Master List!G2:G";
+        Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+        ValueRange response = service.spreadsheets().values()
+                .get(spreadsheetId, range)
+                .execute();
+
+        return response.getValues()
+                .stream()
+                .map(objects -> (String) objects.get(0))
+                .collect(Collectors.toList());
+    }
+
     public static List<Person> getPeopleFromSheet (String spreadsheetId) throws GeneralSecurityException, IOException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         final String range = "Master List!A2:D";

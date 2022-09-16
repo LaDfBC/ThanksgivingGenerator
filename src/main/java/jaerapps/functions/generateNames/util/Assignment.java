@@ -1,8 +1,8 @@
 package jaerapps.functions.generateNames.util;
 
 public class Assignment {
-    private Person santa;
-    private Person assignment;
+    private final Person santa;
+    private final Person assignment;
 
     public Person getSanta() {
         return santa;
