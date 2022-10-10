@@ -17,6 +17,7 @@ dependencies {
   implementation 'com.google.apis:google-api-services-sheets:v4-rev20210629-1.32.1'
   implementation 'javax.mail:mail:1.5.0-b01'
   implementation 'com.google.cloud:google-cloud-secretmanager'
+  implementation 'com.google.cloud:google-cloud-firestore:3.6.0'
 
   // To run function locally using Functions Framework's local invoker
   invoker 'com.google.cloud.functions.invoker:java-function-invoker:1.1.0'

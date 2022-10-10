@@ -9,10 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import jaerapps.functions.generateNames.util.Assignment;
-import jaerapps.functions.generateNames.util.GoogleSecretManagerService;
-import jaerapps.functions.generateNames.util.GoogleSheetsService;
-import jaerapps.functions.generateNames.util.Person;
+import jaerapps.functions.generateNames.util.*;
 
 import javax.mail.Message;
 import javax.mail.PasswordAuthentication;
@@ -29,6 +26,7 @@ import java.util.stream.Collectors;
 import static jaerapps.functions.generateNames.util.GoogleSheetsService.logAssignments;
 
 public class GenerateGiftNames implements HttpFunction {
+    public static final String PROJECT_ID = "thanksgivinggenerator";
     private static final Logger LOGGER = Logger.getLogger("Generate Gift Names");
     private static final Gson gson = new Gson();
     private static final Random random = new Random();
@@ -48,14 +46,23 @@ public class GenerateGiftNames implements HttpFunction {
                 generationToAssignments.put(generation, assignments);
             }
 
-            sendEmails(generationToAssignments);
+            try {
+                FirestoreService assignmentDatabase = new FirestoreService();
+                boolean databaseInsertSuccessful = assignmentDatabase.insertAssignments(generationToAssignments);
+                if (databaseInsertSuccessful) {
+                    sendEmails(generationToAssignments);
+                }
+            } catch (Exception e) {
+                response.setStatusCode(500, "Caught error while writing to database and email: " + e.getMessage());
+                e.printStackTrace();
+            }
+
             response.setStatusCode(200);
         } catch (GeneralSecurityException gse) {
             String message = "Failed to connect and fetch from Sheet!";
             LOGGER.severe(message);
             response.setStatusCode(500, message);
         }
-        return;
     }
 
     private void sendEmails(Map<String, Map<Person, Person>> generationToAssignments) {
@@ -78,9 +85,9 @@ public class GenerateGiftNames implements HttpFunction {
         });
 
         generationToAssignments.forEach((generationName, assignments) -> {
-            Map<String, List<Assignment>> parentGroups = combineChildrenUnderParent(assignments);
+            Map<String, List<Assignment>> parentGroups = AssignmentUtil.combineChildrenUnderParent(assignments);
             parentGroups.forEach((currentParentName, children) -> {
-                Person parent = findPersonByName(assignments, currentParentName);
+                Person parent = AssignmentUtil.findPersonByName(assignments, currentParentName);
                 MimeMessage message = new MimeMessage(session);
                 try {
                     message.setFrom(new InternetAddress("christmasemailer.noreply@gmail.com"));
@@ -111,33 +118,7 @@ public class GenerateGiftNames implements HttpFunction {
 
     }
 
-    private Person findPersonByName(Map<Person, Person> assignments, String currentParentName) {
-            List<Person> personByName = assignments.keySet().stream().filter(person ->
-                person.getName().equals(currentParentName)).collect(Collectors.toList());
 
-        if (personByName.size() != 1) {
-            throw new IllegalStateException(
-                    "Encountered " + personByName.size() + " people with the name " + currentParentName + " instead of 1");
-        }
-
-        return personByName.get(0);
-    }
-
-
-    private Map<String, List<Assignment>> combineChildrenUnderParent(Map<Person, Person> assignments) {
-        Map<String, List<Assignment>> parentGroups = Maps.newHashMap();
-
-        assignments.forEach((santa, target) -> {
-            if (parentGroups.containsKey(santa.getParentOverride())) {
-                List<Assignment> currentPeopleUnderParent= parentGroups.get(santa.getParentOverride());
-                currentPeopleUnderParent.add(new Assignment(santa, target));
-                parentGroups.put(santa.getParentOverride(), currentPeopleUnderParent);
-            } else {
-                parentGroups.put(santa.getParentOverride(), Lists.newArrayList(Collections.singletonList(new Assignment(santa, target))));
-            }
-        });
-        return parentGroups;
-    }
 
     private Map<Person, Person> assignRecipients(List<Person> people, Map<String, Map<Person, Person>> generationToAssignments) {
         Map<Person, Person> finishedAssignments = Maps.newHashMap();
@@ -226,6 +207,4 @@ public class GenerateGiftNames implements HttpFunction {
 
         return groups;
     }
-
-
 }
