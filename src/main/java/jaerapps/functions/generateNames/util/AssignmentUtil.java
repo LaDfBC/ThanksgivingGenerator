@@ -35,4 +35,16 @@ public class AssignmentUtil {
 
         return personByName.get(0);
     }
+
+    public static Person findPersonByName(List<Person> assignments, String nameToFind) {
+        List<Person> personByName = assignments.stream().filter(person ->
+                person.getName().equals(nameToFind)).collect(Collectors.toList());
+
+        if (personByName.size() != 1) {
+            throw new IllegalStateException(
+                    "Encountered " + personByName.size() + " people with the name " + nameToFind + " instead of 1");
+        }
+
+        return personByName.get(0);
+    }
 }

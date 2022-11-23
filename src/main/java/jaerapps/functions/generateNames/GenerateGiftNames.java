@@ -5,6 +5,7 @@ import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
@@ -23,13 +24,15 @@ import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static jaerapps.functions.generateNames.util.GoogleSheetsService.logAssignments;
 
 public class GenerateGiftNames implements HttpFunction {
     public static final String PROJECT_ID = "thanksgivinggenerator";
     private static final Logger LOGGER = Logger.getLogger("Generate Gift Names");
     private static final Gson gson = new Gson();
     private static final Random random = new Random();
+
+    private static final Map<String, String> forcedSantas = Maps.newHashMap();
+//            ImmutableMap.of("Gary Dugger", "Dave Hillyard", "Vickie Schoening", "Addison Hillyard");
 
     // Simple function to return "Hello World"
     @Override
@@ -42,7 +45,6 @@ public class GenerateGiftNames implements HttpFunction {
 
             for (String generation : generations) {
                 Map<Person, Person> assignments = assignRecipients(peopleFromSheet, generationToAssignments);
-                logAssignments(assignments);
                 generationToAssignments.put(generation, assignments);
             }
 
@@ -115,9 +117,7 @@ public class GenerateGiftNames implements HttpFunction {
                 }
             });
         });
-
     }
-
 
 
     private Map<Person, Person> assignRecipients(List<Person> people, Map<String, Map<Person, Person>> generationToAssignments) {
@@ -133,7 +133,19 @@ public class GenerateGiftNames implements HttpFunction {
                 Multimap<Person, Person> alreadyMatched = ArrayListMultimap.create();
                 generationToAssignments.values().forEach(personPersonMap -> personPersonMap.forEach(alreadyMatched::put));
 
-                people.forEach(currentSanta -> {
+                List<Person> nonForcedPeople = Lists.newArrayList(people);
+                /**
+                 * Handles specific requests people have for other individuals for whom they want to play Santa
+                 */
+                forcedSantas.forEach((santaName, recipientName) -> {
+                    final Person recipient = AssignmentUtil.findPersonByName(people, recipientName);
+                    final Person santa = AssignmentUtil.findPersonByName(people, santaName);
+                    assignments.put(santa, recipient);
+                    notYetAssignedPeopleGrouped.remove(recipient.getGroup(), recipient);
+                    nonForcedPeople.remove(santa);
+                });
+
+                nonForcedPeople.forEach(currentSanta -> {
                     List<Person> largestGroup = getLargestEligibleGroup(currentSanta, notYetAssignedPeopleGrouped);
                     Person selectedAssignment;
                     // Checks if the largest remaining group is equal to all other groups

@@ -91,35 +91,6 @@ public class GoogleSheetsService {
         }
     }
 
-    public static void logAssignments(Map<Person, Person> assignments) throws GeneralSecurityException, IOException {
-        String spreadsheetId = "1tkrhLwUwyJpMjxRm81CzYcPxrCPvmcl3Plfh_y4rvoY";
-
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
-
-        List<ValueRange> requests = Lists.newArrayList();
-        int currentRow = 2;
-
-        for (Map.Entry<Person, Person> currentPair:  assignments.entrySet()) {
-            Person santa = currentPair.getKey();
-            Person assignment = currentPair.getValue();
-
-            requests.add(
-                    new ValueRange()
-                            .setRange("Latest Run!A" + currentRow + ":B" + currentRow )
-                            .setValues(Collections.singletonList(Arrays.asList(santa.getName(), assignment.getName()))));
-            currentRow = currentRow + 1;
-        }
-
-        BatchUpdateValuesRequest batchBody = new BatchUpdateValuesRequest()
-                .setValueInputOption("RAW")
-                .setData(requests);
-
-        service.spreadsheets().values().batchUpdate(spreadsheetId, batchBody).execute();
-    }
-
     /**
      * Creates an authorized Credential object.
      * @param HTTP_TRANSPORT The network HTTP Transport.
