@@ -1,0 +1,5 @@
+{
+  "app": "node aws/bin/cdk.js",
+  "profile": "grovelight",
+  "context": {}
+}

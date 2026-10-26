@@ -12,6 +12,8 @@
 
 # Package Files #
 *.jar
+# ...except the Gradle wrapper, which CodeBuild runs.
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -30,3 +32,8 @@ hs_err_pid*
 
 # Shhh, secrets
 tokens/*
+
+# Build output, CDK and npm
+build/
+cdk.out/
+node_modules/

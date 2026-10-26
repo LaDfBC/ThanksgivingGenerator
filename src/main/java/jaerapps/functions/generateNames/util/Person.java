@@ -1,11 +1,17 @@
 package jaerapps.functions.generateNames.util;
 
+import java.util.Locale;
 import java.util.Objects;
 
+/**
+ * Someone in the exchange. Names are unique within a request and are how everything else refers to a person.
+ * People who share an email (kids under a parent, say) get one combined email.
+ * People in the same group never give to each other; with no group, a person is a group of one.
+ * {@link #getGroup()} is the group as typed ("" for none); {@link #getGroupKey()} is what's compared.
+ */
 public class Person {
     private final String name;
     private final String email;
-    private final String parentOverride;
     private final String group;
 
     public String getName() {
@@ -16,18 +22,18 @@ public class Person {
         return email;
     }
 
-    public String getParentOverride() {
-        return parentOverride;
-    }
-
     public String getGroup() {
         return group;
     }
 
-    private Person(String name, String email, String parentOverride, String group) {
+    /** Case-insensitive; a person without a group gets a key of their own that no typed group can match. */
+    public String getGroupKey() {
+        return group.isEmpty() ? "\0person:" + name.toLowerCase(Locale.ROOT) : group.toLowerCase(Locale.ROOT);
+    }
+
+    private Person(String name, String email, String group) {
         this.name = name;
         this.email = email;
-        this.parentOverride = parentOverride;
         this.group = group;
     }
 
@@ -40,18 +46,22 @@ public class Person {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Person person = (Person) o;
-        return Objects.equals(name, person.name) && Objects.equals(email, person.email) && Objects.equals(parentOverride, person.parentOverride) && Objects.equals(group, person.group);
+        return Objects.equals(name, person.name) && Objects.equals(email, person.email) && Objects.equals(group, person.group);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, email, parentOverride, group);
+        return Objects.hash(name, email, group);
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 
     public static class Builder {
         private String name;
         private String email;
-        private String parentOverride;
         private String group;
 
         public Builder setName(String name) {
@@ -64,18 +74,13 @@ public class Person {
             return this;
         }
 
-        public Builder setParentOverride(String parentOverride) {
-            this.parentOverride = parentOverride;
-            return this;
-        }
-
         public Builder setGroup(String group) {
             this.group = group;
             return this;
         }
 
         public Person build() {
-            return new Person(name, email, parentOverride, group);
+            return new Person(name, email, group == null ? "" : group.trim());
         }
     }
 }
