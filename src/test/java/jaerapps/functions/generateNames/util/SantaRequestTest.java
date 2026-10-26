@@ -50,4 +50,15 @@ public class SantaRequestTest {
         assertThat(forced.keySet()).containsExactly("One", "Two");
         assertThat(forced.get("Two").get(people.get(0))).isEqualTo(people.get(2));
     }
+
+    @Test
+    public void twoPeopleAreEnoughButOneIsNot() {
+        String two = "[{\"name\":\"Ann\",\"email\":\"a@x.com\"},{\"name\":\"Bob\",\"email\":\"b@x.com\"}]";
+        assertThat(parse("{\"people\":" + two + "}").cleanPeople()).hasSize(2);
+
+        String one = "[{\"name\":\"Ann\",\"email\":\"a@x.com\"}]";
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> parse("{\"people\":" + one + "}").cleanPeople());
+        assertThat(e).hasMessageThat().isEqualTo("Add at least two people.");
+    }
 }

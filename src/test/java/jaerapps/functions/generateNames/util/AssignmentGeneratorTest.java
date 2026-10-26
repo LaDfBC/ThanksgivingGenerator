@@ -75,4 +75,13 @@ public class AssignmentGeneratorTest {
         assertThat(bodies.get("parent@example.com")).contains("Kid One → Zed");
         assertThat(bodies.get("parent@example.com")).contains("Kid Two → Yan");
     }
+
+    @Test
+    public void twoPeopleDrawEachOther() throws Exception {
+        Person ann = person("Ann", "");
+        Person bob = person("Bob", "");
+        Map<Person, Person> pairs = new AssignmentGenerator(new Random(0))
+                .assign(List.of(ann, bob), List.of("Secret Santa"), Map.of()).get("Secret Santa");
+        assertThat(pairs).containsExactly(ann, bob, bob, ann);
+    }
 }

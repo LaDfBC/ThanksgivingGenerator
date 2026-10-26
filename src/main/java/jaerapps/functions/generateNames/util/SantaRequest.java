@@ -46,7 +46,7 @@ public class SantaRequest {
     }
 
     public List<Person> cleanPeople() {
-        require(people != null && people.size() >= 3, "Add at least three people.");
+        require(people != null && people.size() >= 2, "Add at least two people.");
         require(people.size() <= MAX_PEOPLE, "At most " + MAX_PEOPLE + " people per run.");
 
         Set<String> seen = new HashSet<>();
