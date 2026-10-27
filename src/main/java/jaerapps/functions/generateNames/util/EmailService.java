@@ -138,8 +138,8 @@ public class EmailService {
             tables.append("</table>");
         });
 
-        String intro = count == 1 ? "Here's who you're buying for. Keep it secret!"
-                : "Here's who everyone on this address is buying for. Keep it secret!";
+        String intro = count == 1 ? "Here's who you're buying for."
+                : "Here's who everyone on this address is buying for.";
         return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">"
                 + "<title>" + esc(title) + "</title></head>"
                 + "<body style=\"margin:0;padding:0;background:#f5f2ec\">"
