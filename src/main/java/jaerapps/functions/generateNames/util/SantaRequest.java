@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
  */
 public class SantaRequest {
     public static final int MAX_PEOPLE = 150;
+    public static final int MAX_EMAILS = 5;
     public static final int MAX_EXCHANGES = 5;
     private static final int MAX_NAME = 60;
     private static final int MAX_TITLE = 80;
@@ -53,16 +54,21 @@ public class SantaRequest {
         List<Person> result = new ArrayList<>();
         for (PersonInput input : people) {
             String name = trim(input.name);
-            String email = trim(input.email);
+            List<String> emails = Person.splitEmails(trim(input.email));
             String group = trim(input.group);
             require(!name.isEmpty(), "Every person needs a name.");
             require(name.length() <= MAX_NAME, "\"" + name + "\" is longer than " + MAX_NAME + " characters.");
             require(seen.add(name.toLowerCase(Locale.ROOT)), "\"" + name + "\" is listed twice; names must be unique.");
-            require(EMAIL.matcher(email).matches() && email.length() <= 254, "\"" + name + "\" needs a valid email.");
+            require(!emails.isEmpty(), "\"" + name + "\" needs a valid email.");
+            require(emails.size() <= MAX_EMAILS, "\"" + name + "\" can have at most " + MAX_EMAILS + " emails.");
+            for (String email : emails) {
+                require(EMAIL.matcher(email).matches() && email.length() <= 254,
+                        "\"" + email + "\" (for \"" + name + "\") isn't a valid email.");
+            }
             require(group.length() <= MAX_NAME, "The group for \"" + name + "\" is longer than " + MAX_NAME + " characters.");
             result.add(Person.create()
                     .setName(name)
-                    .setEmail(email)
+                    .setEmail(String.join(", ", emails))
                     .setGroup(group)
                     .build());
         }

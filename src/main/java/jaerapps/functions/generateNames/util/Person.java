@@ -1,11 +1,15 @@
 package jaerapps.functions.generateNames.util;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * Someone in the exchange. Names are unique within a request and are how everything else refers to a person.
- * People who share an email (kids under a parent, say) get one combined email.
+ * A person can have several emails ({@link #getEmails()}); each one gets their draw, and signing in with any of them
+ * shows it. People who share an email (kids under a parent, say) get one combined email at it.
  * People in the same group never give to each other; with no group, a person is a group of one.
  * {@link #getGroup()} is the group as typed ("" for none); {@link #getGroupKey()} is what's compared.
  */
@@ -18,8 +22,25 @@ public class Person {
         return name;
     }
 
+    /** Every email as entered, comma-separated ("ann@x.com, ann@work.com"); see {@link #getEmails()}. */
     public String getEmail() {
         return email;
+    }
+
+    /** The separate addresses in {@link #getEmail()}, in order, without case-insensitive repeats. */
+    public List<String> getEmails() {
+        return splitEmails(email);
+    }
+
+    /** Splits "a@x.com, b@y.com" (commas, semicolons or whitespace between) into its addresses. */
+    public static List<String> splitEmails(String emails) {
+        Map<String, String> byKey = new LinkedHashMap<>();
+        for (String part : (emails == null ? "" : emails).split("[,;\\s]+")) {
+            if (!part.isEmpty()) {
+                byKey.putIfAbsent(part.toLowerCase(Locale.ROOT), part);
+            }
+        }
+        return List.copyOf(byKey.values());
     }
 
     public String getGroup() {

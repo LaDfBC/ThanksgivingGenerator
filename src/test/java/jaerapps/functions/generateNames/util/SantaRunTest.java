@@ -56,4 +56,18 @@ public class SantaRunTest {
                 Map.of("santa", "Parent", "recipient", "Kid"),
                 Map.of("santa", "Cat", "recipient", "Parent")));
     }
+
+    @Test
+    public void someoneWithSeveralEmailsSeesTheirDrawFromAnyOfThem() {
+        Person ann = person("Ann", "ann@x.com, ann@work.com");
+        Person bob = person("Bob", "bob@x.com");
+        Map<Person, Person> pairs = new LinkedHashMap<>();
+        pairs.put(ann, bob);
+        pairs.put(bob, ann);
+        SantaRun run = SantaRun.create("Larkin", "owner@x.com", List.of(ann, bob), Map.of("Adults", pairs)).withId("abc");
+
+        assertThat(run.participantEmails()).containsExactly("ann@x.com", "ann@work.com", "bob@x.com");
+        assertThat(run.drawsFor("ANN@work.com")).hasSize(1);
+        assertThat(run.drawsFor("ann@x.com").get(0)).containsEntry("recipient", "Bob");
+    }
 }

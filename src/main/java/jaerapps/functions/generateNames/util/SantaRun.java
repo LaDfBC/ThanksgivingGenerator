@@ -43,7 +43,7 @@ public record SantaRun(String id,
 
     /** Lower-cased, for finding the runs someone is in. */
     public List<String> participantEmails() {
-        return people.stream().map(person -> normalize(person.getEmail())).distinct().toList();
+        return people.stream().flatMap(person -> person.getEmails().stream()).map(SantaRun::normalize).distinct().toList();
     }
 
     /** What the list of an organizer's exchanges shows. */
@@ -90,7 +90,9 @@ public record SantaRun(String id,
     public List<Map<String, String>> drawsFor(String email) {
         String wanted = normalize(email);
         Set<String> santas = new LinkedHashSet<>();
-        people.stream().filter(person -> normalize(person.getEmail()).equals(wanted)).forEach(person -> santas.add(person.getName()));
+        people.stream()
+                .filter(person -> person.getEmails().stream().anyMatch(e -> normalize(e).equals(wanted)))
+                .forEach(person -> santas.add(person.getName()));
 
         List<Map<String, String>> draws = new ArrayList<>();
         for (Exchange exchange : exchanges) {

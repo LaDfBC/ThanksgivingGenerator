@@ -61,4 +61,17 @@ public class SantaRequestTest {
                 () -> parse("{\"people\":" + one + "}").cleanPeople());
         assertThat(e).hasMessageThat().isEqualTo("Add at least two people.");
     }
+
+    @Test
+    public void aPersonCanHaveSeveralEmails() {
+        String people = "[{\"name\":\"Ann\",\"email\":\"ann@x.com; Ann@Work.com ann@x.com\"},{\"name\":\"Bob\",\"email\":\"b@x.com\"}]";
+        Person ann = parse("{\"people\":" + people + "}").cleanPeople().get(0);
+        assertThat(ann.getEmail()).isEqualTo("ann@x.com, Ann@Work.com");
+        assertThat(ann.getEmails()).containsExactly("ann@x.com", "Ann@Work.com").inOrder();
+
+        String bad = "[{\"name\":\"Ann\",\"email\":\"ann@x.com, nope\"},{\"name\":\"Bob\",\"email\":\"b@x.com\"}]";
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> parse("{\"people\":" + bad + "}").cleanPeople());
+        assertThat(e).hasMessageThat().isEqualTo("\"nope\" (for \"Ann\") isn't a valid email.");
+    }
 }

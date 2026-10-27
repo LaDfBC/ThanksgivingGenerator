@@ -145,7 +145,7 @@ public class SantaApi {
 
         List<String> failed = email.sendAssignments(title, exchangeToAssignments);
 
-        long addresses = people.stream().map(p -> SantaRun.normalize(p.getEmail())).distinct().count();
+        long addresses = people.stream().flatMap(p -> p.getEmails().stream()).map(SantaRun::normalize).distinct().count();
         long emailed = addresses - failed.size();
         store.recordEmailResult(runId, emailed, failed);
         LOGGER.info("Run " + runId + " by " + caller.email() + ": " + people.size() + " people, " + exchanges.size()

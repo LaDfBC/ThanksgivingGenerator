@@ -8,7 +8,8 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /**
- * Sends each address one email listing every santa who uses it (so a parent gets their kids' draws too),
+ * Sends each address one email listing every santa who uses it (so a parent gets their kids' draws too, and someone
+ * with several emails gets their draw at each),
  * across all exchanges in the run. Goes out through SES from FROM_EMAIL, an address at the grovelight.net domain
  * that flyte-frontend's stack verifies.
  */
@@ -57,12 +58,13 @@ public class EmailService {
         boolean severalExchanges = exchangeToAssignments.size() > 1;
         // email -> exchange -> lines, kept in a stable order so the email reads the same way the list does
         Map<String, Map<String, List<String>>> lines = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        // Every one of a santa's emails gets their line.
         exchangeToAssignments.forEach((exchange, assignments) -> assignments.entrySet().stream()
                 .sorted(Comparator.comparing(entry -> entry.getKey().getName()))
-                .forEach(entry -> lines
-                        .computeIfAbsent(entry.getKey().getEmail(), k -> new LinkedHashMap<>())
+                .forEach(entry -> entry.getKey().getEmails().forEach(email -> lines
+                        .computeIfAbsent(email, k -> new LinkedHashMap<>())
                         .computeIfAbsent(exchange, k -> new ArrayList<>())
-                        .add(entry.getKey().getName() + " → " + entry.getValue().getName())));
+                        .add(entry.getKey().getName() + " → " + entry.getValue().getName()))));
 
         Map<String, String> bodies = new LinkedHashMap<>();
         lines.forEach((email, byExchange) -> {
@@ -75,7 +77,7 @@ public class EmailService {
                 }
                 exchangeLines.forEach(line -> text.append("  ").append(line).append('\n'));
             });
-            text.append("\nKeep it secret!\n");
+            text.append("\nAs a new addition this year, you can log in with this email address to get a reminder at www.grovelight.net/secretsanta\n");
             bodies.put(email, text.toString());
         });
         return bodies;
