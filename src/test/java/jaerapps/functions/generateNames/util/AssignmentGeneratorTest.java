@@ -70,10 +70,11 @@ public class AssignmentGeneratorTest {
         Person other2 = person("Yan", "y");
         Map<String, Map<Person, Person>> run = Map.of("Kids", Map.of(kid1, other, kid2, other2, other, kid1, other2, kid2));
 
-        Map<String, String> bodies = EmailService.buildBodies("Larkin Christmas", run);
-        assertThat(bodies).hasSize(3);
-        assertThat(bodies.get("parent@example.com")).contains("Kid One → Zed");
-        assertThat(bodies.get("parent@example.com")).contains("Kid Two → Yan");
+        Map<String, EmailService.Email> emails = EmailService.buildEmails("Larkin Christmas", run);
+        assertThat(emails).hasSize(3);
+        assertThat(emails.get("parent@example.com").text()).contains("Kid One → Zed");
+        assertThat(emails.get("parent@example.com").text()).contains("Kid Two → Yan");
+        assertThat(emails.get("parent@example.com").html()).contains(">Kid One</td>");
     }
 
     @Test
